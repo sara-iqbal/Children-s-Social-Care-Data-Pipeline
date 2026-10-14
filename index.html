@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Children's Social Care Dashboard</title>
+<meta name="description" content="Performance and data quality dashboard built on synthetic children's social care data. A portfolio project by Sara Iqbal.">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+  :root {
+    color-scheme: light;
+    --page: #f9f9f7;
+    --surface: #fcfcfb;
+    --ink: #0b0b0b;
+    --ink-2: #52514e;
+    --muted: #898781;
+    --grid: #e1e0d9;
+    --axis: #c3c2b7;
+    --border: rgba(11,11,11,0.10);
+    --series-1: #2a78d6;
+    --series-2: #eb6834;
+    --seq: #2a78d6;
+    --good: #0ca30c;
+    --warning: #fab219;
+    --critical: #d03b3b;
+    --good-text: #006300;
+    --warning-text: #8a5a00;
+    --critical-text: #b02c2c;
+    --accent-soft: #e9f1fb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --page: #0d0d0d;
+      --surface: #1a1a19;
+      --ink: #f0efec;
+      --ink-2: #c3c2b7;
+      --muted: #898781;
+      --grid: #2c2c2a;
+      --axis: #383835;
+      --border: rgba(255,255,255,0.10);
+      --series-1: #3987e5;
+      --series-2: #d95926;
+      --seq: #3987e5;
+      --good-text: #0ca30c;
+      --warning-text: #fab219;
+      --critical-text: #e66767;
+      --accent-soft: #1b2a3d;
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --grid: #2c2c2a; --axis: #383835; --border: rgba(255,255,255,0.10);
+    --series-1: #3987e5; --series-2: #d95926; --seq: #3987e5;
+    --good-text: #0ca30c; --warning-text: #fab219; --critical-text: #e66767; --accent-soft: #1b2a3d;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--page); color: var(--ink);
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    font-size: 15px; line-height: 1.5;
+  }
+  .wrap { max-width: 1180px; margin: 0 auto; padding: 32px 16px 56px; }
+
+  header { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: flex-end; margin-bottom: 20px; }
+  .eyebrow { font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 0 0 6px; }
+  h1 { font-size: clamp(22px, 3.4vw, 30px); line-height: 1.2; margin: 0 0 6px; font-weight: 700; }
+  .sub { color: var(--ink-2); margin: 0; max-width: 680px; }
+  .header-actions { display: flex; gap: 8px; align-items: center; }
+  .btn {
+    font: inherit; font-size: 13px; padding: 7px 12px; border-radius: 8px; cursor: pointer;
+    border: 1px solid var(--border); background: var(--surface); color: var(--ink); text-decoration: none;
+  }
+  .btn:hover { border-color: var(--axis); }
+
+  .notice {
+    display: flex; gap: 10px; align-items: flex-start; background: var(--accent-soft);
+    border-radius: 10px; padding: 12px 14px; margin-bottom: 24px; color: var(--ink-2); font-size: 14px;
+  }
+  .notice strong { color: var(--ink); }
+
+  .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .tile { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+  .tile .label { font-size: 13px; color: var(--ink-2); }
+  .tile .value { font-size: 28px; font-weight: 700; line-height: 1.15; margin-top: 4px; }
+
+  h2 { font-size: 19px; margin: 0; }
+  .section-head { display: flex; flex-wrap: wrap; gap: 12px; justify-content: space-between; align-items: center; margin: 8px 0 14px; }
+  .section-note { color: var(--ink-2); font-size: 14px; margin: 4px 0 0; }
+
+  .seg { display: inline-flex; background: var(--surface); border: 1px solid var(--border); border-radius: 9px; padding: 3px; }
+  .seg button {
+    font: inherit; font-size: 13px; border: 0; background: transparent; color: var(--ink-2);
+    padding: 6px 12px; border-radius: 6px; cursor: pointer;
+  }
+  .seg button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+
+  .kpis { display: grid; grid-template-columns: repeat(auto-fill, minmax(255px, 1fr)); gap: 12px; margin-bottom: 32px; }
+  .kpi { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 8px; }
+  .kpi .name { font-size: 14px; color: var(--ink-2); min-height: 42px; }
+  .kpi .row { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+  .kpi .val { font-size: 30px; font-weight: 700; line-height: 1; }
+  .kpi .meta { font-size: 12.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; font-weight: 600; }
+  .status .dot { width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; color: #fff; font-size: 11px; font-weight: 800; }
+  .status.Green { color: var(--good-text); }   .status.Green .dot { background: var(--good); }
+  .status.Amber { color: var(--warning-text); } .status.Amber .dot { background: var(--warning); color: #0b0b0b; }
+  .status.Red { color: var(--critical-text); }  .status.Red .dot { background: var(--critical); }
+  .bar { height: 6px; border-radius: 3px; background: var(--grid); position: relative; overflow: visible; }
+  .bar .fill { position: absolute; left: 0; top: 0; bottom: 0; border-radius: 3px; background: var(--seq); }
+  .bar .tick { position: absolute; top: -4px; bottom: -4px; width: 2px; background: var(--ink); border-radius: 1px; }
+
+  .grid2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 460px), 1fr)); gap: 14px; margin-bottom: 14px; }
+  .grid3 { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr)); gap: 14px; margin-bottom: 32px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px 16px 12px; min-width: 0; }
+  .card h3 { font-size: 15px; margin: 0 0 2px; }
+  .card p.cap { margin: 0 0 12px; color: var(--ink-2); font-size: 13px; }
+  .chart { position: relative; height: 260px; }
+  .chart.tall { height: 300px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 12.5px; color: var(--ink-2); margin: 0 0 10px; }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .legend i { width: 14px; height: 3px; border-radius: 2px; display: inline-block; }
+  .legend i.dash { background: repeating-linear-gradient(90deg, var(--muted) 0 4px, transparent 4px 7px); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+  th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--grid); }
+  th { color: var(--ink-2); font-weight: 600; font-size: 12.5px; }
+  td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .table-wrap { overflow-x: auto; }
+  .sev { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 99px; border: 1px solid var(--border); white-space: nowrap; }
+
+  .method { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr)); gap: 14px; }
+  .step { background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 16px; }
+  .step b { display: block; margin-bottom: 4px; }
+  .step span { color: var(--ink-2); font-size: 14px; }
+  .step .n { font-size: 12px; color: var(--muted); font-weight: 600; letter-spacing: .05em; }
+
+  footer { margin-top: 36px; color: var(--muted); font-size: 13px; border-top: 1px solid var(--grid); padding-top: 16px; }
+  footer a { color: var(--ink-2); }
+  .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <p class="eyebrow">Portfolio project · Sara Iqbal, MSc Data Science</p>
+      <h1>Children's Social Care Performance Dashboard</h1>
+      <p class="sub">Reporting year 2025-26 for two fictional borough services. Built from a Python and SQL pipeline that generates case data, validates it, produces an SSDA903-style statutory return and calculates a performance scorecard.</p>
+    </div>
+    <div class="header-actions">
+      <a class="btn" id="nbLink" href="childrens_social_care_pipeline.ipynb">View notebook</a>
+      <button class="btn" id="themeBtn" type="button" aria-label="Toggle dark mode">Dark mode</button>
+    </div>
+  </header>
+
+  <div class="notice" role="note">
+    <span aria-hidden="true">ⓘ</span>
+    <div><strong>All data on this page is synthetic.</strong> No real child, family or worker is represented. Targets are illustrative, loosely informed by recent England averages, and are not official benchmarks.</div>
+  </div>
+
+  <section aria-label="Headline numbers">
+    <div class="tiles" id="tiles"></div>
+  </section>
+
+  <section aria-labelledby="sc-title">
+    <div class="section-head">
+      <div>
+        <h2 id="sc-title">Performance scorecard</h2>
+        <p class="section-note">Each card shows the result, the target (black tick on the bar) and a RAG rating. Amber means within 5 percentage points of target.</p>
+      </div>
+      <div class="seg" role="group" aria-label="Choose area" id="areaSeg">
+        <button type="button" data-area="All" aria-pressed="true">Both boroughs</button>
+        <button type="button" data-area="Kingston" aria-pressed="false">Kingston</button>
+        <button type="button" data-area="Richmond" aria-pressed="false">Richmond</button>
+      </div>
+    </div>
+    <div class="kpis" id="kpis"></div>
+  </section>
+
+  <section aria-labelledby="as-title">
+    <div class="section-head"><h2 id="as-title">Assessment timeliness</h2></div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Completed within 45 working days, by month</h3>
+        <p class="cap">One team sits well below the others all year. The dip in autumn follows summer-holiday starts.</p>
+        <div class="legend" aria-hidden="true">
+          <span><i style="background:var(--series-1)"></i>All teams</span>
+          <span><i style="background:var(--series-2)"></i>Kingston Assessment Team B</span>
+          <span><i class="dash"></i>Target 85%</span>
+        </div>
+        <div class="chart tall"><canvas id="cMonthly" role="img" aria-label="Line chart of monthly assessment timeliness"></canvas></div>
+      </div>
+      <div class="card">
+        <h3>Timeliness by team, full year</h3>
+        <p class="cap">Percentage of assessments completed within 45 working days. The dashed line is the 85% target.</p>
+        <div class="chart tall"><canvas id="cTeams" role="img" aria-label="Bar chart of timeliness by team"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="dq-title" style="margin-top:24px">
+    <div class="section-head">
+      <div>
+        <h2 id="dq-title">Data quality</h2>
+        <p class="section-note">Ten validation rules run in SQL. Errors would block the SSDA903 return; queries need checking.</p>
+      </div>
+    </div>
+    <div class="grid2">
+      <div class="card">
+        <h3>Exceptions by rule</h3>
+        <p class="cap">Every error planted in the synthetic data was caught by the rules.</p>
+        <div class="table-wrap"><table id="dqTable"></table></div>
+      </div>
+      <div class="card">
+        <h3>Assessment recording errors per 100 assessments</h3>
+        <p class="cap">Rates, not counts, so bigger teams don't look worse just for being bigger.</p>
+        <div class="chart"><canvas id="cDqTeam" role="img" aria-label="Bar chart of recording errors per 100 assessments by team"></canvas></div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="mix-title" style="margin-top:24px">
+    <div class="section-head"><h2 id="mix-title">Service profile</h2></div>
+    <div class="grid3">
+      <div class="card"><h3>Referrals by source</h3><p class="cap">Share of referrals in the year (%).</p><div class="chart"><canvas id="cSource" role="img" aria-label="Bar chart of referral sources"></canvas></div></div>
+      <div class="card"><h3>CP plans started, by category</h3><p class="cap">Share of child protection plans (%).</p><div class="chart"><canvas id="cCp" role="img" aria-label="Bar chart of child protection plan categories"></canvas></div></div>
+      <div class="card"><h3>Children in care on 31 March</h3><p class="cap">Share by placement type (%).</p><div class="chart"><canvas id="cPlace" role="img" aria-label="Bar chart of placement types"></canvas></div></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="m-title">
+    <div class="section-head"><h2 id="m-title">How it was built</h2></div>
+    <div class="method">
+      <div class="step"><span class="n">01</span><b>Generate</b><span>Python creates linked tables for children, referrals, assessments, CP plans, care episodes and care leavers, with realistic patterns and planted errors.</span></div>
+      <div class="step"><span class="n">02</span><b>Validate</b><span>Ten SQL rules modelled on DfE checks produce an exceptions report by rule, team and worker.</span></div>
+      <div class="step"><span class="n">03</span><b>Return</b><span>Header, Episodes and OC3 tables are built in the SSDA903 layout, with children who have blocking errors flagged.</span></div>
+      <div class="step"><span class="n">04</span><b>Report</b><span>Eight standard KPIs with targets and RAG ratings, exported to CSV for Power BI and JSON for this page.</span></div>
+    </div>
+  </section>
+
+  <footer>
+    Built by Sara Iqbal with Python, SQL (SQLite), Power BI and Chart.js. Data generated <span id="genDate"></span> with a fixed random seed, so every run reproduces the same figures.
+  </footer>
+</div>
+
+<script>
+const DATA = {"generated": "2026-10-14", "reporting_year": "2025-26", "headline": {"children": 5505, "referrals_in_year": 2313, "assessments_completed": 1701, "cp_plans_open": 220, "children_in_care": 127, "care_leavers": 115, "dq_exceptions": 372, "dq_errors": 168}, "scorecard": [{"area": "All", "kpi_key": "assess_45", "kpi": "Assessments completed within 45 working days", "value_pct": 81.8, "denominator": 1701, "target_pct": 85, "higher_is_better": true, "rag": "Amber"}, {"area": "All", "kpi_key": "rereferral", "kpi": "Re-referrals within 12 months", "value_pct": 16.6, "denominator": 2313, "target_pct": 20, "higher_is_better": false, "rag": "Green"}, {"area": "All", "kpi_key": "cp_2yrs", "kpi": "CP plans ended that lasted 2+ years", "value_pct": 2.2, "denominator": 224, "target_pct": 4, "higher_is_better": false, "rag": "Green"}, {"area": "All", "kpi_key": "repeat_cp", "kpi": "CP plans that were a repeat plan", "value_pct": 23.8, "denominator": 240, "target_pct": 22, "higher_is_better": false, "rag": "Amber"}, {"area": "All", "kpi_key": "cla_3plus", "kpi": "Children in care with 3+ placements in year", "value_pct": 12.6, "denominator": 127, "target_pct": 10, "higher_is_better": false, "rag": "Amber"}, {"area": "All", "kpi_key": "lt_stability", "kpi": "Long-term placement stability", "value_pct": 76.7, "denominator": 43, "target_pct": 70, "higher_is_better": true, "rag": "Green"}, {"area": "All", "kpi_key": "cl_eet", "kpi": "Care leavers (19-21) in education/employment/training", "value_pct": 54.8, "denominator": 115, "target_pct": 55, "higher_is_better": true, "rag": "Amber"}, {"area": "All", "kpi_key": "cl_accom", "kpi": "Care leavers in suitable accommodation", "value_pct": 87.0, "denominator": 115, "target_pct": 88, "higher_is_better": true, "rag": "Amber"}, {"area": "Kingston", "kpi_key": "assess_45", "kpi": "Assessments completed within 45 working days", "value_pct": 77.5, "denominator": 791, "target_pct": 85, "higher_is_better": true, "rag": "Red"}, {"area": "Kingston", "kpi_key": "rereferral", "kpi": "Re-referrals within 12 months", "value_pct": 16.0, "denominator": 1091, "target_pct": 20, "higher_is_better": false, "rag": "Green"}, {"area": "Kingston", "kpi_key": "cp_2yrs", "kpi": "CP plans ended that lasted 2+ years", "value_pct": 4.6, "denominator": 109, "target_pct": 4, "higher_is_better": false, "rag": "Amber"}, {"area": "Kingston", "kpi_key": "repeat_cp", "kpi": "CP plans that were a repeat plan", "value_pct": 24.4, "denominator": 119, "target_pct": 22, "higher_is_better": false, "rag": "Amber"}, {"area": "Kingston", "kpi_key": "cla_3plus", "kpi": "Children in care with 3+ placements in year", "value_pct": 14.3, "denominator": 63, "target_pct": 10, "higher_is_better": false, "rag": "Amber"}, {"area": "Kingston", "kpi_key": "lt_stability", "kpi": "Long-term placement stability", "value_pct": 72.0, "denominator": 25, "target_pct": 70, "higher_is_better": true, "rag": "Green"}, {"area": "Kingston", "kpi_key": "cl_eet", "kpi": "Care leavers (19-21) in education/employment/training", "value_pct": 50.0, "denominator": 46, "target_pct": 55, "higher_is_better": true, "rag": "Amber"}, {"area": "Kingston", "kpi_key": "cl_accom", "kpi": "Care leavers in suitable accommodation", "value_pct": 82.6, "denominator": 46, "target_pct": 88, "higher_is_better": true, "rag": "Red"}, {"area": "Richmond", "kpi_key": "assess_45", "kpi": "Assessments completed within 45 working days", "value_pct": 85.6, "denominator": 910, "target_pct": 85, "higher_is_better": true, "rag": "Green"}, {"area": "Richmond", "kpi_key": "rereferral", "kpi": "Re-referrals within 12 months", "value_pct": 17.2, "denominator": 1222, "target_pct": 20, "higher_is_better": false, "rag": "Green"}, {"area": "Richmond", "kpi_key": "cp_2yrs", "kpi": "CP plans ended that lasted 2+ years", "value_pct": 0.0, "denominator": 115, "target_pct": 4, "higher_is_better": false, "rag": "Green"}, {"area": "Richmond", "kpi_key": "repeat_cp", "kpi": "CP plans that were a repeat plan", "value_pct": 23.1, "denominator": 121, "target_pct": 22, "higher_is_better": false, "rag": "Amber"}, {"area": "Richmond", "kpi_key": "cla_3plus", "kpi": "Children in care with 3+ placements in year", "value_pct": 10.9, "denominator": 64, "target_pct": 10, "higher_is_better": false, "rag": "Amber"}, {"area": "Richmond", "kpi_key": "lt_stability", "kpi": "Long-term placement stability", "value_pct": 83.3, "denominator": 18, "target_pct": 70, "higher_is_better": true, "rag": "Green"}, {"area": "Richmond", "kpi_key": "cl_eet", "kpi": "Care leavers (19-21) in education/employment/training", "value_pct": 58.0, "denominator": 69, "target_pct": 55, "higher_is_better": true, "rag": "Green"}, {"area": "Richmond", "kpi_key": "cl_accom", "kpi": "Care leavers in suitable accommodation", "value_pct": 89.9, "denominator": 69, "target_pct": 88, "higher_is_better": true, "rag": "Green"}], "monthly": {"months": ["Apr 25", "May 25", "Jun 25", "Jul 25", "Aug 25", "Sep 25", "Oct 25", "Nov 25", "Dec 25", "Jan 26", "Feb 26", "Mar 26"], "all": [79.6, 83.3, 86.8, 85.3, 83.1, 82.3, 75.0, 78.7, 83.7, 79.6, 82.7, 82.5], "teams": {"Kingston Assessment Team A": [86.7, 80.0, 90.6, 82.2, 84.6, 83.3, 87.2, 81.8, 97.9, 93.3, 88.9, 90.2], "Kingston Assessment Team B": [61.3, 68.8, 82.5, 78.1, 72.0, 63.6, 50.0, 69.2, 62.5, 50.0, 58.8, 69.4], "Richmond Assessment Team A": [84.6, 94.1, 95.2, 85.7, 79.5, 89.2, 87.8, 85.1, 86.1, 89.3, 88.0, 84.4], "Richmond Assessment Team B": [83.3, 90.0, 83.7, 94.7, 94.1, 85.0, 73.8, 75.5, 78.3, 84.2, 94.7, 84.2]}}, "referral_rates": [{"borough": "Kingston", "referrals": 1091, "population_0_17": 40000, "rate_per_10k": 272.8}, {"borough": "Richmond", "referrals": 1222, "population_0_17": 45000, "rate_per_10k": 271.6}], "referral_sources": {"Police": 27.2, "Schools": 20.6, "Health services": 16.0, "Other": 15.0, "LA services": 9.7, "Individual": 7.9, "Anonymous": 3.6}, "cp_categories": {"Neglect": 56.2, "Emotional abuse": 30.4, "Physical abuse": 9.6, "Sexual abuse": 2.5, "Multiple": 1.2}, "placements": {"Foster (other)": 46.5, "Kinship foster": 17.3, "Foster (long-term)": 12.6, "Children's home": 11.0, "Placed with parents": 7.1, "Kinship foster (long-term)": 2.4, "Residential care home": 1.6, "Placed for adoption": 1.6}, "dq_by_rule": [{"rule_id": "DQ01", "rule": "Ethnicity not recorded", "severity": "Query", "records": 165}, {"rule_id": "DQ02", "rule": "Assessment ends before it starts", "severity": "Error", "records": 45}, {"rule_id": "DQ03", "rule": "Assessment has no allocated worker", "severity": "Error", "records": 60}, {"rule_id": "DQ04", "rule": "Date of birth is after first referral", "severity": "Error", "records": 20}, {"rule_id": "DQ05", "rule": "Invalid legal status code", "severity": "Error", "records": 15}, {"rule_id": "DQ06", "rule": "Care episodes overlap", "severity": "Error", "records": 12}, {"rule_id": "DQ07", "rule": "Episode ended with no reason recorded", "severity": "Error", "records": 10}, {"rule_id": "DQ08", "rule": "Care leaver in touch but activity missing", "severity": "Error", "records": 6}, {"rule_id": "DQ09", "rule": "School-age child in care has no UPN", "severity": "Query", "records": 14}, {"rule_id": "DQ10", "rule": "Possible duplicate referral", "severity": "Query", "records": 25}], "dq_by_team": [{"team": "Kingston Assessment Team B", "errors": 45, "assessments": 1154, "errors_per_100": 3.9}, {"team": "Richmond Assessment Team B", "errors": 30, "assessments": 1314, "errors_per_100": 2.28}, {"team": "Richmond Assessment Team A", "errors": 17, "assessments": 1278, "errors_per_100": 1.33}, {"team": "Kingston Assessment Team A", "errors": 13, "assessments": 1154, "errors_per_100": 1.13}], "team_timeliness": [{"team": "Kingston Assessment Team A", "pct": 87.2, "n": 429}, {"team": "Kingston Assessment Team B", "pct": 66.0, "n": 362}, {"team": "Richmond Assessment Team A", "pct": 86.8, "n": 432}, {"team": "Richmond Assessment Team B", "pct": 84.5, "n": 478}]};
+
+/* ---------- helpers ---------- */
+const $ = (s) => document.querySelector(s);
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+const fmt = (n) => Number(n).toLocaleString("en-GB");
+const ICON = { Green: "✓", Amber: "!", Red: "✕", Grey: "–" };
+const LABEL = { Green: "On target", Amber: "Near target", Red: "Off target", Grey: "No data" };
+
+/* ---------- notebook link ----------
+   On GitHub Pages (username.github.io/repo/) point to the rendered notebook on github.com */
+(function () {
+  const host = location.hostname;
+  if (host.endsWith("github.io")) {
+    const user = host.split(".")[0];
+    const repo = location.pathname.split("/").filter(Boolean)[0] || (user + ".github.io");
+    $("#nbLink").href = `https://github.com/${user}/${repo}/blob/main/childrens_social_care_pipeline.ipynb`;
+  }
+})();
+
+/* ---------- theme toggle ---------- */
+const root = document.documentElement;
+function isDark() {
+  const t = root.getAttribute("data-theme");
+  if (t) return t === "dark";
+  return window.matchMedia("(prefers-color-scheme: dark)").matches;
+}
+function syncThemeBtn() { $("#themeBtn").textContent = isDark() ? "Light mode" : "Dark mode"; }
+$("#themeBtn").addEventListener("click", () => {
+  root.setAttribute("data-theme", isDark() ? "light" : "dark");
+  syncThemeBtn(); drawCharts();
+});
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => { syncThemeBtn(); drawCharts(); });
+
+/* ---------- headline tiles ---------- */
+const H = DATA.headline;
+const tiles = [
+  ["Referrals in year", H.referrals_in_year],
+  ["Assessments completed", H.assessments_completed],
+  ["Open CP plans (31 Mar)", H.cp_plans_open],
+  ["Children in care (31 Mar)", H.children_in_care],
+  ["Care leavers aged 19-21", H.care_leavers],
+  ["Data quality exceptions", H.dq_exceptions],
+];
+$("#tiles").innerHTML = tiles.map(([l, v]) =>
+  `<div class="tile"><div class="label">${l}</div><div class="value">${fmt(v)}</div></div>`).join("");
+
+/* ---------- scorecard ---------- */
+function renderKpis(area) {
+  const rows = DATA.scorecard.filter((r) => r.area === area);
+  $("#kpis").innerHTML = rows.map((r) => {
+    const v = r.value_pct, t = r.target_pct;
+    const scaleMax = Math.max(100, v || 0);
+    const dir = r.higher_is_better ? "Higher is better" : "Lower is better";
+    return `<article class="kpi" aria-label="${r.kpi}">
+      <div class="name">${r.kpi}</div>
+      <div class="row">
+        <div class="val">${v === null ? "–" : v.toFixed(1) + "%"}</div>
+        <div class="status ${r.rag}"><span class="dot" aria-hidden="true">${ICON[r.rag]}</span>${LABEL[r.rag]}</div>
+      </div>
+      <div class="bar" aria-hidden="true">
+        <div class="fill" style="width:${(v || 0) / scaleMax * 100}%"></div>
+        <div class="tick" style="left:calc(${t / scaleMax * 100}% - 1px)"></div>
+      </div>
+      <div class="meta">Target ${t}% · ${dir} · n = ${fmt(r.denominator)}</div>
+    </article>`;
+  }).join("");
+}
+document.querySelectorAll("#areaSeg button").forEach((b) => b.addEventListener("click", () => {
+  document.querySelectorAll("#areaSeg button").forEach((x) => x.setAttribute("aria-pressed", "false"));
+  b.setAttribute("aria-pressed", "true");
+  renderKpis(b.dataset.area);
+}));
+renderKpis("All");
+
+/* ---------- data quality table ---------- */
+$("#dqTable").innerHTML =
+  `<thead><tr><th>Rule</th><th>Check</th><th>Type</th><th class="num">Records</th></tr></thead><tbody>` +
+  DATA.dq_by_rule.map((r) =>
+    `<tr><td>${r.rule_id}</td><td>${r.rule}</td><td><span class="sev">${r.severity}</span></td><td class="num">${fmt(r.records)}</td></tr>`
+  ).join("") + `</tbody>`;
+$("#genDate").textContent = DATA.generated;
+
+/* ---------- charts ---------- */
+const charts = [];
+function baseOpts(extra = {}) {
+  return Object.assign({
+    responsive: true, maintainAspectRatio: false, animation: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        backgroundColor: css("--surface"), titleColor: css("--ink"), bodyColor: css("--ink-2"),
+        borderColor: css("--axis"), borderWidth: 1, padding: 10, cornerRadius: 8, displayColors: true, boxPadding: 4,
+      },
+    },
+  }, extra);
+}
+function axisCommon() {
+  return { grid: { color: css("--grid"), drawTicks: false }, border: { color: css("--axis") },
+           ticks: { color: css("--muted"), font: { size: 11.5 }, padding: 6 } };
+}
+// Draws a dashed reference line at a value on the value axis
+function targetLine(value, axis) {
+  return {
+    id: "target" + axis + value,
+    afterDatasetsDraw(chart) {
+      const { ctx, chartArea: a, scales } = chart;
+      const s = scales[axis]; const p = s.getPixelForValue(value);
+      ctx.save(); ctx.strokeStyle = css("--muted"); ctx.setLineDash([4, 3]); ctx.lineWidth = 1.5; ctx.beginPath();
+      if (axis === "y") { ctx.moveTo(a.left, p); ctx.lineTo(a.right, p); }
+      else { ctx.moveTo(p, a.top); ctx.lineTo(p, a.bottom); }
+      ctx.stroke(); ctx.restore();
+    },
+  };
+}
+function hbar(id, labels, values, opts = {}) {
+  const x = Object.assign(axisCommon(), { beginAtZero: true, max: opts.max,
+    ticks: Object.assign(axisCommon().ticks, { callback: (v) => v + (opts.unit || "") }) });
+  const y = Object.assign(axisCommon(), { grid: { display: false }, ticks: Object.assign(axisCommon().ticks, { color: css("--ink-2") }) });
+  charts.push(new Chart($(id), {
+    type: "bar",
+    data: { labels, datasets: [{ data: values, backgroundColor: opts.colors || css("--seq"),
+      borderRadius: 4, borderSkipped: "start", barPercentage: 0.72, categoryPercentage: 0.9 }] },
+    options: baseOpts({ indexAxis: "y", scales: { x, y },
+      plugins: Object.assign(baseOpts().plugins, { tooltip: Object.assign(baseOpts().plugins.tooltip, {
+        displayColors: false, callbacks: { label: (c) => (opts.tip ? opts.tip(c) : c.parsed.x + (opts.unit || "")) } }) }) }),
+    plugins: opts.target ? [targetLine(opts.target, "x")] : [],
+  }));
+}
+
+function drawCharts() {
+  charts.splice(0).forEach((c) => c.destroy());
+  Chart.defaults.font.family = 'system-ui, -apple-system, "Segoe UI", Roboto, sans-serif';
+
+  // Monthly timeliness
+  const M = DATA.monthly;
+  const y = Object.assign(axisCommon(), { min: 40, max: 100, ticks: Object.assign(axisCommon().ticks, { callback: (v) => v + "%" }) });
+  const x = Object.assign(axisCommon(), { grid: { display: false } });
+  charts.push(new Chart($("#cMonthly"), {
+    type: "line",
+    data: { labels: M.months, datasets: [
+      { label: "All teams", data: M.all, borderColor: css("--series-1"), backgroundColor: css("--series-1"),
+        borderWidth: 2.5, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderColor: css("--surface"), pointHoverBorderWidth: 2, tension: 0.25 },
+      { label: "Kingston Assessment Team B", data: M.teams["Kingston Assessment Team B"], borderColor: css("--series-2"), backgroundColor: css("--series-2"),
+        borderWidth: 2, pointRadius: 0, pointHoverRadius: 5, pointHoverBorderColor: css("--surface"), pointHoverBorderWidth: 2, tension: 0.25 },
+    ]},
+    options: baseOpts({ interaction: { mode: "index", intersect: false }, scales: { x, y },
+      plugins: Object.assign(baseOpts().plugins, { tooltip: Object.assign(baseOpts().plugins.tooltip, {
+        callbacks: { label: (c) => ` ${c.dataset.label}: ${c.parsed.y.toFixed(1)}%` } }) }) }),
+    plugins: [targetLine(85, "y"), {
+      id: "crosshair",
+      afterDatasetsDraw(chart) {
+        const act = chart.tooltip && chart.tooltip.getActiveElements();
+        if (!act || !act.length) return;
+        const { ctx, chartArea: a } = chart; const px = act[0].element.x;
+        ctx.save(); ctx.strokeStyle = css("--axis"); ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(px, a.top); ctx.lineTo(px, a.bottom); ctx.stroke(); ctx.restore();
+      },
+    }],
+  }));
+
+  // Team timeliness, the focus team highlighted
+  const T = DATA.team_timeliness;
+  hbar("#cTeams", T.map((t) => t.team.replace(" Assessment ", " ")), T.map((t) => t.pct), {
+    unit: "%", max: 100, target: 85,
+    colors: T.map((t) => t.team === "Kingston Assessment Team B" ? css("--series-2") : css("--seq")),
+    tip: (c) => `${c.parsed.x.toFixed(1)}% of ${fmt(T[c.dataIndex].n)} assessments`,
+  });
+
+  // DQ by team
+  const D = DATA.dq_by_team;
+  hbar("#cDqTeam", D.map((d) => d.team.replace(" Assessment ", " ")), D.map((d) => d.errors_per_100), {
+    colors: D.map((d) => d.team === "Kingston Assessment Team B" ? css("--series-2") : css("--seq")),
+    tip: (c) => `${c.parsed.x.toFixed(2)} per 100 (${D[c.dataIndex].errors} errors in ${fmt(D[c.dataIndex].assessments)} assessments)`,
+  });
+
+  const kv = (o) => [Object.keys(o), Object.values(o)];
+  let [l, v] = kv(DATA.referral_sources); hbar("#cSource", l, v, { unit: "%" });
+  [l, v] = kv(DATA.cp_categories);        hbar("#cCp", l, v, { unit: "%" });
+  [l, v] = kv(DATA.placements);           hbar("#cPlace", l, v, { unit: "%" });
+}
+
+syncThemeBtn();
+if (window.Chart) drawCharts();
+else document.querySelectorAll(".chart").forEach((c) => c.innerHTML = '<p class="cap">Charts need an internet connection to load Chart.js.</p>');
+</script>
+</body>
+</html>
