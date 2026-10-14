@@ -2,10 +2,6 @@
 
 **From messy case records to a statutory return and a performance scorecard, built end to end on synthetic data.**
 
-[Live dashboard](https://<your-username>.github.io/<repository-name>/) · [Notebook](childrens_social_care_pipeline.ipynb) · [Open in Colab](https://colab.research.google.com/github/<your-username>/<repository-name>/blob/main/childrens_social_care_pipeline.ipynb)
-
-![Assessment timeliness by month](images/assessment_timeliness.png)
-
 ## The problem
 
 Every week, social workers in England record what is happening for thousands of children: referrals, assessments, child protection plans, children coming into care and moving between placements. All of that lives in a case management system such as Liquidlogic.
@@ -70,8 +66,6 @@ What stands out:
 * **The same team has the most recording errors.** It logs 3.9 errors per 100 assessments, against 1.1 to 2.3 elsewhere. Slow assessments and poor recording appearing together usually point to capacity, not carelessness.
 * **Timeliness dipped in autumn.** Assessments completed in October 2025 had the lowest on-time rate (75.0%), and most of the late ones had started in July, when staff leave peaks.
 * **The return isn't ready to submit yet.** The validation found 372 exceptions, 168 of them errors. 25 of the 190 children in the SSDA903 return have at least one blocking error that needs fixing first.
-
-![Recording errors by team](images/dq_by_team.png)
 
 ## What I learned, and how I'd interpret this
 
